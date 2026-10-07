@@ -1,7 +1,7 @@
 
 services:
   mlflow:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     ports:
@@ -17,7 +17,7 @@ services:
       - ./mlflow-data:/app
 
   training-script:
-    build: 
+    build:
       context: .
       dockerfile: scripts/Dockerfile
     environment:
@@ -27,7 +27,7 @@ services:
         condition: service_healthy
 
   fastapi:
-    build: 
+    build:
       context:  .
       dockerfile: api/Dockerfile
     ports:
@@ -35,7 +35,7 @@ services:
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
     depends_on:                                      # ensure mlflow is healthy and training script has completed successfully before starting the API
-      mlflow: 
+      mlflow:
         condition: service_healthy
       training-script:
         condition: service_completed_successfully

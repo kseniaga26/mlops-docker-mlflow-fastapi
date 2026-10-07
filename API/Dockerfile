@@ -1,9 +1,9 @@
 FROM python:3.12.13-slim
 
 #Ensure that Python output is sent straight to the terminal without buffering
-ENV PYTHONBUFFERED=1 
+ENV PYTHONBUFFERED=1
 
-ENV PYTHONBYTECODE=1 
+ENV PYTHONBYTECODE=1
 
 WORKDIR /app
 

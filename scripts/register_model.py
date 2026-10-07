@@ -5,23 +5,22 @@ import pandas as pd
 from pydantic import BaseModel
 
 
-
 class InputPatient(BaseModel):
     age: int
     sex: int
-    cp : int
+    cp: int
     trestbps: int
-    chol : int
-    fbs : int
+    chol: int
+    fbs: int
     restecg: int
-    thalach : int
-    exang : int
-    oldpeak : float
-    slope : int
-    ca : int
-    thal : int   
-    
-     
+    thalach: int
+    exang: int
+    oldpeak: float
+    slope: int
+    ca: int
+    thal: int
+
+
 mlflow_uri = os.environ["MLFLOW_TRACKING_URI"]
 
 
@@ -44,21 +43,49 @@ def test_load_model(model_name, model_version):
         oldpeak=0.8,
         slope=1,
         ca=1,
-        thal=3
+        thal=3,
     )
-    columns = ["age", "sex", "cp", "trestbps", "chol", "fbs", "restecg", "thalach", "exang", "oldpeak", "slope", "ca", "thal"]
+    columns = [
+        "age",
+        "sex",
+        "cp",
+        "trestbps",
+        "chol",
+        "fbs",
+        "restecg",
+        "thalach",
+        "exang",
+        "oldpeak",
+        "slope",
+        "ca",
+        "thal",
+    ]
     # Valores
-    features = pd.DataFrame([[
-            data.age, data.sex, data.cp, data.trestbps,
-            data.chol, data.fbs, data.restecg, data.thalach,
-            data.exang, data.oldpeak, data.slope, data.ca, data.thal
-        ]], columns=columns)
+    features = pd.DataFrame(
+        [
+            [
+                data.age,
+                data.sex,
+                data.cp,
+                data.trestbps,
+                data.chol,
+                data.fbs,
+                data.restecg,
+                data.thalach,
+                data.exang,
+                data.oldpeak,
+                data.slope,
+                data.ca,
+                data.thal,
+            ]
+        ],
+        columns=columns,
+    )
 
-   
     print(features)
 
     print("Model loaded:", type(loaded_model))
-    print(loaded_model.predict(features))  
+    print(loaded_model.predict(features))
 
 
 def register_best_model(model_name):
@@ -67,22 +94,19 @@ def register_best_model(model_name):
     print(mlflow.get_tracking_uri())
     runs = mlflow.search_runs(
         experiment_names=["heart_disease_prediction"],
-        order_by=["metrics.f1 DESC"], 
+        order_by=["metrics.f1 DESC"],
     )
 
     best_run_id = runs.iloc[0]["run_id"]
     print("Best run ID:", best_run_id)
 
-    
-    model_uri = f'runs:/{best_run_id}/model'
+    model_uri = f"runs:/{best_run_id}/model"
 
     with mlflow.start_run(run_id=best_run_id):
         mlflow.register_model(model_uri=model_uri, name=model_name)
 
 
-
-
-if __name__ == "__main__":  
-    model_name = 'heart_disease_prediction'
+if __name__ == "__main__":
+    model_name = "heart_disease_prediction"
     register_best_model(model_name)
     test_load_model(model_name, 1)

@@ -1,21 +1,27 @@
 import os
-import pandas as pd
-
-from sklearn.compose import ColumnTransformer
-from sklearn.model_selection import train_test_split
-import mlflow
-from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
-import yaml
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
-from sklearn.pipeline import Pipeline
-
-from constant import MODEL_REGISTRY, NUMERICAL_COLS, CATEGORICAL_COLS
-
 import warnings
+
+import mlflow
+import pandas as pd
+import yaml
+from constant import CATEGORICAL_COLS, MODEL_REGISTRY, NUMERICAL_COLS
+from sklearn.compose import ColumnTransformer
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
+
 warnings.filterwarnings("ignore")
 
 
 mlflow_uri = os.environ["MLFLOW_TRACKING_URI"]
+
 
 def load_data(path):
     df = pd.read_csv(path)
@@ -23,74 +29,81 @@ def load_data(path):
     y = df["target"]
     return train_test_split(x, y, test_size=0.2, random_state=42)
 
-def build_preprocessor(strategy, numerical_cols=NUMERICAL_COLS, categorical_cols=CATEGORICAL_COLS):
+
+def build_preprocessor(
+    strategy, numerical_cols=NUMERICAL_COLS, categorical_cols=CATEGORICAL_COLS
+):
     if strategy == "tree":
-        encoder = OrdinalEncoder()   # in reality our dataset is already ordinal
-        scaler = "passthrough"  # no scaling for tree-based models
-    else:  # linear
+        encoder = OrdinalEncoder()
+        scaler = "passthrough"
+    else:
         encoder = OneHotEncoder()
         scaler = StandardScaler()
-    
-    return ColumnTransformer(transformers=[
-        ("num", scaler, numerical_cols),
-        ("cat", encoder, categorical_cols),
-    ])
+
+    return ColumnTransformer(
+        transformers=[
+            ("num", scaler, numerical_cols),
+            ("cat", encoder, categorical_cols),
+        ]
+    )
 
 
-def train_model(experiment_name, model_cfg, X_train, y_train,X_test, y_test):
+def train_model(experiment_name, model_cfg, X_train, y_train, X_test, y_test):
     model_name = model_cfg.get("model_name", None)
     model_instance = MODEL_REGISTRY.get(model_name, None)
 
     if model_instance is None:
         raise ValueError(f"Model {model_name} not found in registry.")
-    
+
     model_hyperparams = model_cfg.get("hyperparameters", {})
     preproc_strat = model_cfg.get("preproc_strategy", None)
 
-    preprocessor = build_preprocessor(preproc_strat, numerical_cols=NUMERICAL_COLS, categorical_cols=CATEGORICAL_COLS)
+    preprocessor = build_preprocessor(
+        preproc_strat, numerical_cols=NUMERICAL_COLS, categorical_cols=CATEGORICAL_COLS
+    )
 
+    pipeline = Pipeline(
+        [("preprocessor", preprocessor), ("model", model_instance(**model_hyperparams))]
+    )
 
-    pipeline = Pipeline([
-    ("preprocessor", preprocessor),
-    ("model", model_instance(**model_hyperparams))
-    ])
-    
     if mlflow.active_run():
         mlflow.end_run()
 
     with mlflow.start_run(run_name=experiment_name):
-
         mlflow.log_params(model_hyperparams)
 
         pipeline.fit(X_train, y_train)
 
-        y_pred = pipeline.predict(X_test) 
-        y_pred_proba = pipeline.predict_proba(X_test) if hasattr(pipeline, "predict_proba") else None
+        y_pred = pipeline.predict(X_test)
+        y_pred_proba = (
+            pipeline.predict_proba(X_test)
+            if hasattr(pipeline, "predict_proba")
+            else None
+        )
 
-        mlflow.log_metric("accuracy",accuracy_score(y_test,y_pred))
-        mlflow.log_metric("precision",precision_score(y_test,y_pred))
-        mlflow.log_metric("recall",recall_score(y_test,y_pred))
-        mlflow.log_metric("f1",f1_score(y_test,y_pred))
+        mlflow.log_metric("accuracy", accuracy_score(y_test, y_pred))
+        mlflow.log_metric("precision", precision_score(y_test, y_pred))
+        mlflow.log_metric("recall", recall_score(y_test, y_pred))
+        mlflow.log_metric("f1", f1_score(y_test, y_pred))
         if y_pred_proba is not None:
-            mlflow.log_metric("roc_auc",roc_auc_score(y_test,y_pred_proba[:, 1]))
+            mlflow.log_metric("roc_auc", roc_auc_score(y_test, y_pred_proba[:, 1]))
 
+        model_info = mlflow.sklearn.log_model(
+            sk_model=pipeline,
+            name="model",
+            input_example=X_test[:5],
+            registered_model_name=None,
+        )
 
-        model_info = mlflow.sklearn.log_model(sk_model=pipeline, 
-                                              name="model",
-                                              input_example=X_test[:5],  # log some examples of input data
-                                              registered_model_name=None # only later we will register the best model otherwise it will be a mess
-                                              )
-    
     return model_info
 
 
 def main():
     print("Training started...")
-    with open("config.yaml", "r") as f:
+    with open("config.yaml") as f:
         config = yaml.safe_load(f)
 
     name_experiment = config.get("name_experiment", "Default Experiment")
-
 
     X_train, X_test, y_train, y_test = load_data("data/heart.csv")
 
@@ -100,14 +113,15 @@ def main():
 
     models_cfg = config.get("model", {})
 
-    for i, (model_name, model_cfg) in enumerate(models_cfg.items()):  # .items() gives a tuple of (key,value)
-        print(f"Training model {i+1}/{len(models_cfg)}: {model_name}")
-    
+    for i, (model_name, model_cfg) in enumerate(
+        models_cfg.items()
+    ):  # .items() gives a tuple of (key,value)
+        print(f"Training model {i + 1}/{len(models_cfg)}: {model_name}")
+
         train_model(model_name, model_cfg, X_train, y_train, X_test, y_test)
         print(f"Model {model_name} trained successfully!")
 
 
-
-if __name__ == "__main__":    
+if __name__ == "__main__":
     print("MLflow version:")
     main()

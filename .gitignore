@@ -1,0 +1,91 @@
+# =========================
+# Python
+# =========================
+
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# =========================
+# Poetry
+# =========================
+
+# Poetry cache / local config
+poetry.toml
+
+# =========================
+# Testing
+# =========================
+
+.pytest_cache/
+.coverage
+htmlcov/
+.coverage.*
+coverage.xml
+
+# =========================
+# Type checking / linters
+# =========================
+
+.mypy_cache/
+.ruff_cache/
+
+# =========================
+# IDE
+# =========================
+
+.idea/
+.vscode/
+
+# =========================
+# MLflow
+# =========================
+
+mlflow-data/
+mlruns/
+*.db
+
+# =========================
+# Machine Learning artifacts
+# =========================
+
+*.pkl
+*.pickle
+*.joblib
+*.pt
+*.pth
+*.onnx
+
+# =========================
+# Data
+# =========================
+
+# Ignore generated/local datasets
+# data/*.csv
+
+# =========================
+# OS
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+# Environment / secrets
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# =========================
+# Logs
+# =========================
+
+*.log
+logs/

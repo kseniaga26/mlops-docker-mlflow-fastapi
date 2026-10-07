@@ -19,7 +19,7 @@ patient = {
     "oldpeak": 2.8,
     "slope": 0,
     "ca": 0,
-    "thal": 1
+    "thal": 1,
 }
 
 response = requests.post(f"{BASE_URL}/predict", json=patient)
